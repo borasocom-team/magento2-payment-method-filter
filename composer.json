@@ -27,7 +27,7 @@
     "zendframework/zend-http": "~2.4.6",
     "phing/phing": "@stable",
     "satooshi/php-coveralls": "@stable",
-    "magento/module-offline-payments": "100.0.*"
+    "magento/module-offline-payments": "100.*"
   },
   "license": "MIT",
   "keywords": [
