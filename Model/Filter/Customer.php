@@ -52,11 +52,11 @@ class Customer implements FilterInterface
 
             $customAttribute = $customer->getCustomAttribute('disallowed_payment_methods');
 
-            if ($customAttribute === null) {
-                return;
-            }
+            $disallowedPaymentMethods = null;
 
-            $disallowedPaymentMethods = $customAttribute->getValue();
+            if ($customAttribute !== null) {
+                $disallowedPaymentMethods = $customAttribute->getValue();
+            }
 
             $disallowedPaymentMethodsForAll = $this->scopeConfig->getValue(FilterGeneral::XML_PATH_DISALLOWED_PAYMENT_METHODS_FOR_USERS, FilterGeneral::XML_PATH_DISALLOWED_PAYMENT_METHODS_SCOPE);
 
