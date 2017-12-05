@@ -7,9 +7,31 @@ use Magento\Customer\Api\Data\CustomerInterface;
 use Magento\Framework\DataObject;
 use Magento\Payment\Model\MethodInterface;
 use Magento\Quote\Api\Data\CartInterface;
+use Magento\Framework\App\Config\ScopeConfigInterface;
+use Magento\Framework\App\State;
 
 class Customer implements FilterInterface
 {
+    /**
+     * @var ScopeConfigInterface
+     */
+    protected $scopeConfig;
+
+    protected $appState;
+
+    /**
+     * Constructor
+     *
+     * @param ScopeConfigInterface $scopeConfig
+     */
+    public function __construct(
+        ScopeConfigInterface $scopeConfig,
+        State $state
+    ) {
+        $this->scopeConfig = $scopeConfig;
+        $this->appState = $state;
+    }
+
     /**
      * Execute
      *
@@ -21,25 +43,37 @@ class Customer implements FilterInterface
      */
     public function execute(MethodInterface $paymentMethod, CartInterface $quote, DataObject $result)
     {
-        $customer = $quote->getCustomer();
+        if($this->appState->getAreaCode() != \Magento\Framework\App\Area::AREA_ADMINHTML){
+            $customer = $quote->getCustomer();
 
-        if (!$customer || !($customer instanceof CustomerInterface) || !$customer->getId()) {
-            return;
+            if (!$customer || !($customer instanceof CustomerInterface) || !$customer->getId()) {
+                return;
+            }
+
+            $customAttribute = $customer->getCustomAttribute('disallowed_payment_methods');
+
+            if ($customAttribute === null) {
+                return;
+            }
+
+            $disallowedPaymentMethods = $customAttribute->getValue();
+
+            $disallowedPaymentMethodsForAll = $this->scopeConfig->getValue(FilterGeneral::XML_PATH_DISALLOWED_PAYMENT_METHODS_FOR_USERS, FilterGeneral::XML_PATH_DISALLOWED_PAYMENT_METHODS_SCOPE);
+
+            if ( ! empty($disallowedPaymentMethodsForAll)) {
+                if ($disallowedPaymentMethods === null || $disallowedPaymentMethods === '') {
+                    $disallowedPaymentMethods = $disallowedPaymentMethodsForAll;
+                } else {
+                    $disallowedPaymentMethods = $disallowedPaymentMethodsForAll . ',' . $disallowedPaymentMethods;
+                }
+            }
+
+            if ($disallowedPaymentMethods == '') {
+                return;
+            }
+
+            $disallowedPaymentMethods = explode(',', $disallowedPaymentMethods);
+            $result->setData('is_available', !in_array($paymentMethod->getCode(), $disallowedPaymentMethods));
         }
-
-        $customAttribute = $customer->getCustomAttribute('disallowed_payment_methods');
-
-        if ($customAttribute === null) {
-            return;
-        }
-
-        $disallowedPaymentMethods = $customAttribute->getValue();
-
-        if ($disallowedPaymentMethods == '') {
-            return;
-        }
-
-        $disallowedPaymentMethods = explode(',', $disallowedPaymentMethods);
-        $result->setData('is_available', !in_array($paymentMethod->getCode(), $disallowedPaymentMethods));
     }
 }
